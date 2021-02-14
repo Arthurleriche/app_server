@@ -66,4 +66,6 @@ router.post('/', [
     }
 })
 
+
+console.log('la copue de mon tryvail est propre')
 module.exports = router
