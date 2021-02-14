@@ -13,6 +13,8 @@ connectDB()
 // les routes ======>
 // import toutes les routes de users
 app.use('/api/users', require('./routes/api/users'));
+app.use('/api/auth', require('./routes/api/auth'));
+
 
 // lance le serveur sur 3000
 app.listen(PORT, () => {console.log("je suis server ")})

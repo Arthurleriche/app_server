@@ -1,24 +1,26 @@
 const express = require('express')
 const { check, validationResult } = require('express-validator/check')
 const router = express.Router()
-const bycrypt = require('bcryptjs')
+const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const config = require('config')
+const auth = require('../../middleware/auth')
 
-// import le model USER
 const User = require('../../models/User')
 
-// les routes
-router.get('/', (req, res) => {
-    res.send({
-        title: "je suis get/users"
-    })
+router.get('/', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password')
+        res.json(user)
+    } catch (error) {
+        console.error(error.message)
+        res.status(500)
+    }
 })
 
 router.post('/', [
-    check('name', 'Name is required').not().isEmpty(),
     check('email', 'Email is required').isEmail(),
-    check('password', 'Password is required nad must have more than 6 characters').isLength({min: 6})
+    check('password', 'Password is required').exists()
 ], async (req, res) => {
         
     const errors = validationResult(req)
@@ -28,24 +30,21 @@ router.post('/', [
         return res.status(400).json({errors: errors.array()})
     }
 
-    const {name, email, password} = req.body
+    const {email, password} = req.body
 
     try {
         let user = await User.findOne({email})
 
-        if(user){
-           return res.status(400).json({errors: [{msg: 'user already exist'}]})
+        if(!user){
+           return res.status(400).json({errors: [{msg: 'must registred'}]})
+        }
+        
+        const isMatch = await bcrypt.compare(password, user.password)
+
+        if(!isMatch){
+            return res.status(400).json({errors: [{msg: 'password is not the good one'}]})
         }
 
-        user = new User({name, email, password})
-
-        // cryptage du Password
-        const salt = await bycrypt.genSalt(10)
-        user.password = await bycrypt.hash(password, salt)
-
-        // enregistrement du users
-        await user.save()
-        
         const payload = {
             user: {
                 id: user._id          
@@ -63,7 +62,8 @@ router.post('/', [
         })
 
     } catch (error) {
-        
+        res.status(500).send('not working')
+        console.error({msg: "ooops"})
     }
 })
 
